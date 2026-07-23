@@ -65,16 +65,6 @@
         </div>
       </section>
 
-      <section class="rules panel">
-        <h2>Built-in transformations</h2>
-        <ul>
-          <li>Walmart <strong>Freight Order No.</strong> becomes SHV <strong>BOL Number</strong>.</li>
-          <li>Dates convert from Walmart <strong>MMDDYYYY</strong> to SHV <strong>DDMMYYYY</strong>.</li>
-          <li>Weight is converted to a whole number with commas, units, and symbols removed.</li>
-          <li><strong>AMBIENT</strong> maps to <strong>Dry Van 53'</strong>; every other mode maps to <strong>Reefer 53'</strong> so every fetched record can be loaded.</li>
-          <li>Pushes are SHV upserts keyed by Load Number, so retries safely overwrite the same load.</li>
-        </ul>
-      </section>
     </main>
     <script src="/app.js"></script>
   </body>
