@@ -61,4 +61,11 @@ function send(res, status, body) {
   res.status(status).json(body);
 }
 
-module.exports = { CANDIDATE_EMAIL, WALMART_API, SHV_API, sanitizeLoad, upstream, send };
+module.exports = {
+  CANDIDATE_EMAIL,
+  WALMART_API,
+  SHV_API,
+  sanitizeLoad,
+  upstream,
+  send
+};

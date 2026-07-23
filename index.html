@@ -3,69 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SHV Load Builder</title>
+    <title>Runbook Case — Load Builder</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <header>
-        <p class="eyebrow">Walmart → SHV Logistics</p>
-        <h1>Load Builder</h1>
-        <p class="lede">Fetch every open Walmart tender, normalize it for SHV, then push the complete batch in one safe upsert.</p>
-        <p class="auth-line">Auth token / identity: <code id="candidate-email">taha_bharuchi@hotmail.com</code></p>
-      </header>
+    <div class="wrap">
+      <h1>Walmart → SHV Logistics Load Builder</h1>
+      <p class="sub">
+        Fetch raw Walmart freight tenders, sanitize them per the SHV rules, and push them into the TMS.
+        Auth token / identity:
+        <span class="email">taha_bharuchi@hotmail.com</span>
+      </p>
 
-      <section class="controls" aria-label="Load actions">
-        <button id="fetch-button" type="button">Fetch Loads</button>
-        <button id="push-button" type="button" disabled>Sanitize &amp; Push</button>
-        <p id="status" role="status">Ready to fetch open Walmart tenders.</p>
-      </section>
+      <div class="buttons">
+        <button id="fetch-button" class="primary" type="button">1 · Fetch loads</button>
+        <button id="push-button" class="push" type="button" disabled>2 · Sanitize &amp; push</button>
+      </div>
+      <p class="hint">Fetch first to see the raw tenders, then sanitize &amp; push them to the TMS.</p>
+      <div id="err-banner" class="err-banner" hidden></div>
 
-      <section class="summary" aria-label="Batch summary">
-        <article><span id="fetched-count">0</span><small>Fetched</small></article>
-        <article><span id="sanitized-count">0</span><small>Ready for SHV</small></article>
-        <article><span id="pushed-count">0</span><small>Accepted</small></article>
-      </section>
-
-      <section class="panel" id="response-panel" hidden>
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">SHV API</p>
-            <h2>Push response</h2>
-          </div>
-          <p id="response-meta"></p>
-        </div>
-        <pre id="api-response" class="api-response" aria-live="polite"></pre>
-      </section>
-
-      <section class="panel">
-        <div class="panel-heading">
-          <div>
-            <p class="eyebrow">Preview</p>
-            <h2>Sanitized load payload</h2>
-          </div>
-          <p id="email-note"></p>
-        </div>
-        <div class="table-wrap">
+      <section id="raw-section" hidden>
+        <h2 id="raw-heading">Raw tenders from Walmart portal (0)</h2>
+        <div class="tablewrap">
           <table>
             <thead>
-              <tr>
-                <th>Load</th>
-                <th>BOL</th>
-                <th>Route</th>
-                <th>Ship / Delivery</th>
-                <th>Weight</th>
-                <th>Equipment</th>
-              </tr>
+              <tr id="raw-head"></tr>
             </thead>
-            <tbody id="loads-body">
-              <tr><td colspan="6" class="empty">Fetch loads to see the SHV-ready payload.</td></tr>
-            </tbody>
+            <tbody id="raw-body"></tbody>
           </table>
         </div>
       </section>
 
-    </main>
+      <section id="results-section" hidden>
+        <h2 id="results-heading">Push results (0/0 accepted)</h2>
+        <div id="results-list"></div>
+      </section>
+    </div>
     <script src="/app.js"></script>
   </body>
 </html>

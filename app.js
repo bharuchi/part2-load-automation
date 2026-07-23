@@ -1,125 +1,129 @@
+const RAW_COLUMNS = [
+  'load_no',
+  'frt_ord_no',
+  'shipper_nm',
+  'orig_city',
+  'orig_st',
+  'dest_city',
+  'dest_st',
+  'shp_dt',
+  'del_dt',
+  'wgt',
+  'mode'
+];
+
 const fetchButton = document.querySelector('#fetch-button');
 const pushButton = document.querySelector('#push-button');
-const status = document.querySelector('#status');
-const loadsBody = document.querySelector('#loads-body');
-const fetchedCount = document.querySelector('#fetched-count');
-const sanitizedCount = document.querySelector('#sanitized-count');
-const pushedCount = document.querySelector('#pushed-count');
-const emailNote = document.querySelector('#email-note');
-const responsePanel = document.querySelector('#response-panel');
-const responseMeta = document.querySelector('#response-meta');
-const apiResponse = document.querySelector('#api-response');
+const errBanner = document.querySelector('#err-banner');
+const rawSection = document.querySelector('#raw-section');
+const rawHeading = document.querySelector('#raw-heading');
+const rawHead = document.querySelector('#raw-head');
+const rawBody = document.querySelector('#raw-body');
+const resultsSection = document.querySelector('#results-section');
+const resultsHeading = document.querySelector('#results-heading');
+const resultsList = document.querySelector('#results-list');
 
-let sanitizedLoads = [];
+let rawLoads = [];
 
-function setStatus(message, type = 'neutral') {
-  status.textContent = message;
-  status.dataset.type = type;
-}
-
-function setBusy(button, busy, label) {
-  button.disabled = busy;
-  if (busy) button.dataset.label = button.textContent;
-  button.textContent = busy ? label : button.dataset.label || button.textContent;
-}
-
-function showApiResponse(payload, meta = '', type = 'neutral') {
-  responsePanel.hidden = false;
-  responseMeta.textContent = meta;
-  apiResponse.dataset.type = type;
-  apiResponse.textContent = typeof payload === 'string'
-    ? payload
-    : JSON.stringify(payload, null, 2);
-}
-
-function clearApiResponse() {
-  responsePanel.hidden = true;
-  responseMeta.textContent = '';
-  apiResponse.textContent = '';
-  apiResponse.dataset.type = 'neutral';
-}
-
-function route(load) {
-  return `${load.origin_city}, ${load.origin_state} → ${load.destination_city}, ${load.destination_state}`;
-}
-
-function row(load) {
-  return `<tr>
-    <td>${load.load_number}</td>
-    <td>${load.bol_number}</td>
-    <td>${route(load)}</td>
-    <td>${load.ship_date} / ${load.delivery_date}</td>
-    <td>${load.weight.toLocaleString()} lbs</td>
-    <td>${load.equipment_type}</td>
-  </tr>`;
-}
-
-function renderLoads() {
-  sanitizedCount.textContent = sanitizedLoads.length;
-  loadsBody.innerHTML = sanitizedLoads.length
-    ? sanitizedLoads.map(row).join('')
-    : '<tr><td colspan="6" class="empty">No valid loads were returned.</td></tr>';
-}
-
-async function readJson(response) {
-  const body = await response.json();
-  if (!response.ok) {
-    const error = new Error(body.error || body.message || `Request failed (${response.status})`);
-    error.status = response.status;
-    error.body = body;
-    throw error;
+function setError(message) {
+  if (!message) {
+    errBanner.hidden = true;
+    errBanner.textContent = '';
+    return;
   }
-  return body;
+  errBanner.hidden = false;
+  errBanner.textContent = message;
+}
+
+function setBusy(button, busy, busyLabel) {
+  button.disabled = busy || (button === pushButton && !rawLoads.length);
+  if (busy) button.dataset.label = button.dataset.label || button.textContent;
+  button.textContent = busy ? busyLabel : (button.dataset.label || button.textContent);
+}
+
+function renderRawLoads() {
+  rawSection.hidden = false;
+  rawHeading.textContent = `Raw tenders from Walmart portal (${rawLoads.length})`;
+  rawHead.innerHTML = RAW_COLUMNS.map((col) => `<th>${col}</th>`).join('');
+
+  if (!rawLoads.length) {
+    rawBody.innerHTML = `<tr><td class="muted" colspan="${RAW_COLUMNS.length}">No open tenders returned.</td></tr>`;
+    return;
+  }
+
+  rawBody.innerHTML = rawLoads.map((load) =>
+    `<tr>${RAW_COLUMNS.map((col) => `<td>${String(load[col] ?? '')}</td>`).join('')}</tr>`
+  ).join('');
+}
+
+function renderResults(results) {
+  resultsSection.hidden = false;
+  const accepted = results.filter((r) => r.status === 'pushed').length;
+  resultsHeading.textContent = `Push results (${accepted}/${results.length} accepted)`;
+
+  resultsList.innerHTML = results.map((result) => {
+    const status = result.status || 'error';
+    const errors = result.errors
+      ? `<pre>${escapeHtml(JSON.stringify(result.errors, null, 2))}</pre>`
+      : '';
+    const message = status !== 'pushed' && result.message
+      ? `<div class="errmsg">${escapeHtml(result.message)}</div>`
+      : '';
+
+    return `<div class="card ${status}">
+      <h3>
+        <span class="badge ${status}">${escapeHtml(status)}</span>
+        ${escapeHtml(result.load_number || '(no load number)')}
+      </h3>
+      ${message}
+      ${status !== 'pushed' ? errors : ''}
+      <div class="kv">Sent to TMS:</div>
+      <pre>${escapeHtml(JSON.stringify(result.sent, null, 2))}</pre>
+    </div>`;
+  }).join('');
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
 }
 
 fetchButton.addEventListener('click', async () => {
   setBusy(fetchButton, true, 'Fetching…');
+  setError('');
+  resultsSection.hidden = true;
+  resultsList.innerHTML = '';
   pushButton.disabled = true;
-  clearApiResponse();
-  setStatus('Fetching all open Walmart tenders…');
   try {
-    const body = await readJson(await fetch('/api/fetch-loads'));
-    sanitizedLoads = body.loads;
-    fetchedCount.textContent = body.sourceCount;
-    pushedCount.textContent = '0';
-    emailNote.textContent = `Authenticated as ${body.candidateEmail}`;
-    renderLoads();
-    pushButton.disabled = !sanitizedLoads.length;
-    setStatus(`${sanitizedLoads.length} load${sanitizedLoads.length === 1 ? '' : 's'} sanitized and ready to push.`, 'success');
+    const response = await fetch('/api/fetch-loads');
+    const body = await response.json();
+    if (!response.ok) throw new Error(body.error || 'Fetch failed');
+    rawLoads = Array.isArray(body.loads) ? body.loads : [];
+    renderRawLoads();
+    pushButton.disabled = !rawLoads.length;
   } catch (error) {
-    sanitizedLoads = [];
-    renderLoads();
-    setStatus(error.message, 'error');
+    rawLoads = [];
+    rawSection.hidden = true;
+    setError(error.message);
   } finally {
     setBusy(fetchButton, false);
+    if (!rawLoads.length) pushButton.disabled = true;
   }
 });
 
 pushButton.addEventListener('click', async () => {
   setBusy(pushButton, true, 'Pushing…');
-  setStatus(`Pushing ${sanitizedLoads.length} SHV-ready load${sanitizedLoads.length === 1 ? '' : 's'}…`);
+  setError('');
   try {
-    const response = await fetch('/api/push-loads', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ loads: sanitizedLoads })
-    });
+    const response = await fetch('/api/push-loads', { method: 'POST' });
     const body = await response.json();
-    showApiResponse(body, `POST /api/push-loads → ${response.status}`, response.ok ? 'neutral' : 'error');
-
-    if (!response.ok) {
-      throw Object.assign(new Error(body.error || body.message || `Request failed (${response.status})`), { body });
-    }
-
-    pushedCount.textContent = body.accepted?.length || 0;
-    const rejected = body.rejected || [];
-    setStatus(rejected.length
-      ? `${body.accepted?.length || 0} accepted; ${rejected.length} rejected.`
-      : `${body.accepted?.length || 0} load${body.accepted?.length === 1 ? '' : 's'} accepted by SHV.`, rejected.length ? 'error' : 'success');
+    if (!response.ok) throw new Error(body.error || 'Push failed');
+    renderResults(body.results || []);
   } catch (error) {
-    if (error.body) showApiResponse(error.body, 'POST /api/push-loads failed', 'error');
-    else showApiResponse({ error: error.message }, 'POST /api/push-loads failed', 'error');
-    setStatus(error.message, 'error');
+    setError(error.message);
   } finally {
     setBusy(pushButton, false);
   }
