@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SHV Load Builder</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">Walmart → SHV Logistics</p>
+        <h1>Load Builder</h1>
+        <p class="lede">Fetch every open Walmart tender, normalize it for SHV, then push the complete batch in one safe upsert.</p>
+        <p class="auth-line">Auth token / identity: <code id="candidate-email">taha_bharuchi@hotmail.com</code></p>
+      </header>
+
+      <section class="controls" aria-label="Load actions">
+        <button id="fetch-button" type="button">Fetch Loads</button>
+        <button id="push-button" type="button" disabled>Sanitize &amp; Push</button>
+        <p id="status" role="status">Ready to fetch open Walmart tenders.</p>
+      </section>
+
+      <section class="summary" aria-label="Batch summary">
+        <article><span id="fetched-count">0</span><small>Fetched</small></article>
+        <article><span id="sanitized-count">0</span><small>Ready for SHV</small></article>
+        <article><span id="pushed-count">0</span><small>Accepted</small></article>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Preview</p>
+            <h2>Sanitized load payload</h2>
+          </div>
+          <p id="email-note"></p>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Load</th>
+                <th>BOL</th>
+                <th>Route</th>
+                <th>Ship / Delivery</th>
+                <th>Weight</th>
+                <th>Equipment</th>
+              </tr>
+            </thead>
+            <tbody id="loads-body">
+              <tr><td colspan="6" class="empty">Fetch loads to see the SHV-ready payload.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="rules panel">
+        <h2>Built-in transformations</h2>
+        <ul>
+          <li>Walmart <strong>Freight Order No.</strong> becomes SHV <strong>BOL Number</strong>.</li>
+          <li>Dates convert from Walmart <strong>MMDDYYYY</strong> to SHV <strong>DDMMYYYY</strong>.</li>
+          <li>Weight is converted to a whole number with commas, units, and symbols removed.</li>
+          <li><strong>AMBIENT</strong> maps to <strong>Dry Van 53'</strong>; every other mode maps to <strong>Reefer 53'</strong> so every fetched record can be loaded.</li>
+          <li>Pushes are SHV upserts keyed by Load Number, so retries safely overwrite the same load.</li>
+        </ul>
+      </section>
+    </main>
+    <script src="/app.js"></script>
+  </body>
+</html>
