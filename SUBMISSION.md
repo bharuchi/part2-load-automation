@@ -5,6 +5,7 @@ Fill these into the Part 1 workflow document once ready.
 | Item | Link |
 | --- | --- |
 | Deployed web app (Vercel) | https://part2-load-automation.vercel.app |
+| GitHub repo | https://github.com/bharuchi/part2-load-automation |
 | Loom walkthrough (≤ 3 min) | _record and paste Loom URL here_ |
 
 ## Candidate email (hardcoded)
