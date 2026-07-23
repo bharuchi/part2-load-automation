@@ -6,6 +6,9 @@ const fetchedCount = document.querySelector('#fetched-count');
 const sanitizedCount = document.querySelector('#sanitized-count');
 const pushedCount = document.querySelector('#pushed-count');
 const emailNote = document.querySelector('#email-note');
+const responsePanel = document.querySelector('#response-panel');
+const responseMeta = document.querySelector('#response-meta');
+const apiResponse = document.querySelector('#api-response');
 
 let sanitizedLoads = [];
 
@@ -18,6 +21,22 @@ function setBusy(button, busy, label) {
   button.disabled = busy;
   if (busy) button.dataset.label = button.textContent;
   button.textContent = busy ? label : button.dataset.label || button.textContent;
+}
+
+function showApiResponse(payload, meta = '', type = 'neutral') {
+  responsePanel.hidden = false;
+  responseMeta.textContent = meta;
+  apiResponse.dataset.type = type;
+  apiResponse.textContent = typeof payload === 'string'
+    ? payload
+    : JSON.stringify(payload, null, 2);
+}
+
+function clearApiResponse() {
+  responsePanel.hidden = true;
+  responseMeta.textContent = '';
+  apiResponse.textContent = '';
+  apiResponse.dataset.type = 'neutral';
 }
 
 function route(load) {
@@ -44,13 +63,19 @@ function renderLoads() {
 
 async function readJson(response) {
   const body = await response.json();
-  if (!response.ok) throw new Error(body.error || body.message || `Request failed (${response.status})`);
+  if (!response.ok) {
+    const error = new Error(body.error || body.message || `Request failed (${response.status})`);
+    error.status = response.status;
+    error.body = body;
+    throw error;
+  }
   return body;
 }
 
 fetchButton.addEventListener('click', async () => {
   setBusy(fetchButton, true, 'Fetching…');
   pushButton.disabled = true;
+  clearApiResponse();
   setStatus('Fetching all open Walmart tenders…');
   try {
     const body = await readJson(await fetch('/api/fetch-loads'));
@@ -74,18 +99,26 @@ pushButton.addEventListener('click', async () => {
   setBusy(pushButton, true, 'Pushing…');
   setStatus(`Pushing ${sanitizedLoads.length} SHV-ready load${sanitizedLoads.length === 1 ? '' : 's'}…`);
   try {
-    const body = await readJson(await fetch('/api/push-loads', {
+    const response = await fetch('/api/push-loads', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ loads: sanitizedLoads })
-    }));
+    });
+    const body = await response.json();
+    showApiResponse(body, `POST /api/push-loads → ${response.status}`, response.ok ? 'neutral' : 'error');
+
+    if (!response.ok) {
+      throw Object.assign(new Error(body.error || body.message || `Request failed (${response.status})`), { body });
+    }
+
     pushedCount.textContent = body.accepted?.length || 0;
     const rejected = body.rejected || [];
     setStatus(rejected.length
-      ? `${body.accepted?.length || 0} accepted; ${rejected.length} rejected. See browser console for details.`
+      ? `${body.accepted?.length || 0} accepted; ${rejected.length} rejected.`
       : `${body.accepted?.length || 0} load${body.accepted?.length === 1 ? '' : 's'} accepted by SHV.`, rejected.length ? 'error' : 'success');
-    if (rejected.length) console.error('SHV rejected loads', rejected);
   } catch (error) {
+    if (error.body) showApiResponse(error.body, 'POST /api/push-loads failed', 'error');
+    else showApiResponse({ error: error.message }, 'POST /api/push-loads failed', 'error');
     setStatus(error.message, 'error');
   } finally {
     setBusy(pushButton, false);
