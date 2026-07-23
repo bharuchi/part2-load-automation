@@ -1,6 +1,6 @@
 # Part 2 submission links
 
-Fill these into the Part 1 workflow document once ready.
+Paste these into the Part 1 workflow document.
 
 | Item | Link |
 | --- | --- |
@@ -18,3 +18,4 @@ Fill these into the Part 1 workflow document once ready.
 - Sanitization: trim whitespace, Freight Order → BOL, MMDDYYYY → DDMMYYYY, weight → integer lbs, AMBIENT → Dry Van 53', else → Reefer 53'
 - **Sanitize & Push** → `POST /api/push-loads` → SHV `POST /api/sor/loads` (upsert by `load_number`)
 - Mode/weight filters from Part 1 are intentionally **not** applied — all open tenders are fetched and pushed
+- GitHub → Vercel auto-deploy confirmed on push to `main`
